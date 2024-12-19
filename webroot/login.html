@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Bestellungen</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body style="background-color: black; color: white;">
+        <div id="login">
+            <input type="text" id="user"><br>
+            <input type="password" id="password"><br>
+            <button id="button_login" onclick="login()">Start</button><br>
+        </div>
+        <div id="menu" style="display: none; width: 20%; height: 100%; position: absolute; top: 0; left: 0;">
+            <button id="menu-offen" class="button-deepskyblue" style="margin-top: 37px; margin-left: 5%; width: 90%; height: 3.7em; display: block;">Offen</button>
+            <button id="menu-fertig" class="button-deepskyblue" style="margin-top: 37px; margin-left: 5%; width: 90%; height: 3.7em; display: block;">Fertig</button>
+            <button id="menu-alle" class="button-deepskyblue" style="margin-top: 37px; margin-left: 5%; width: 90%; height: 3.7em; display: block;">Alle</button>
+        </div>
+        <div id="management" style="display: none; width: 80%; height: 100%; position: absolute; top: 0; right: 0;"></div>
+    </body>
+</html>
+<script>
+const _LOGIN = document.getElementById("login")
+const _MENU = document.getElementById("menu")
+const _MANAGEMENT = document.getElementById("management")
+
+var _auth
+
+if(document.location.toString().indexOf('?') !== -1)
+{
+    var query = document.location
+        .toString()
+        // get the query string
+        .replace(/^.*?\?/, '')
+        // and remove any existing hash string (thanks, @vrijdenker)
+        .replace(/#.*$/, '')
+        .split('&')
+
+    for(var a = 0; a < query.length; a++)
+    {
+        var aux = decodeURIComponent(query[a]).split('=')
+        if (aux[0] === "auth")
+        {
+            setInterval(function(){
+                const login = "https://azadweida.de/?method=login&user=Vendor&pass=" + aux[1]
+                fetch(login).then((response) => response.json()).then(function(data)
+                {
+                    if (data.bool)
+                    {
+                        _auth = data.auth
+
+                        _LOGIN.style.display = "none"
+                        _MENU.style.display = "inline-block"
+                        _MANAGEMENT.style.display = "inline-block"
+
+                        MenuData()
+                    }
+                })
+            }, 5000)
+        }
+    }
+}
+
+var ORDER_DATA = ""
+var NEW_ORDER = ""
+var ROT = 0
+var TOROT = false
+
+//console.log(document.cookie)
+
+if (document.cookie.split('=')[0] == 'auth' && document.cookie.split('=')[1] != '')
+{
+    document.getElementById('login').style.display = 'none'
+
+    let menu = document.getElementById('menu')
+    let management = document.getElementById('management')
+
+    menu.style.display = 'block'
+    management.style.display = 'block'
+
+    console.log("hello")
+
+    setInterval(function(){
+        let url = 'https://azadweida.de/?method=order-get'
+        fetch(url).then((resp) => resp.json()).then(function(data){
+            console.log("fetch data", data)
+
+            ORDER_DATA = data
+
+            //MenuData(menu, ORDER_DATA)
+            setInterval(function(){
+                //MenuData(menu, ORDER_DATA)
+            }, 5000)
+            //MenuData(menu, data)
+            ContentData(0, ORDER_DATA, management)
+        })
+    }, 5000)
+} else if(document.cookie.split('=')[0] == 'order') {
+    document.cookie = "order=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    location.reload()
+}
+
+function login()
+{
+    const login = "https://azadweida.de/?method=login&user=" + document.getElementById("user").value + "&pass=" + document.getElementById("password").value
+    fetch(login).then((resp) => resp.json()).then(function(data)
+    {
+        if (data.bool)
+        {
+            //console.log(data)
+            
+
+        }
+    })
+}
+
+function MenuData() {
+        let url = 'https://azadweida.de/?method=order-get'
+        fetch(url).then((resp) => resp.json()).then(function(data){
+            console.log(data)
+
+            let _openordersArray = []
+            let openordersArray = []
+
+            for (let a = 0; a < data.length; a++) {
+                if (data[a]["Status"] == 1) {
+                    _openordersArray.push(data[a])
+                }
+                
+            }
+
+            for (let a = 0; a < ORDER_DATA.length; a++) {
+                if (ORDER_DATA[a]["Status"] == 1) {
+                    openordersArray.push(data[a])
+                }
+                
+            }
+
+            if (openordersArray.length < _openordersArray.length) {
+                //console.log("Array missmatch")
+                TOROT = true
+                ROT = 0
+
+                clearInterval(NEW_ORDER)
+
+                NEW_ORDER = setInterval(function(){
+                    if (TOROT) {
+                        ROT += 10
+
+                        if (ROT >= 255) {
+                            ROT = 255
+                            TOROT = false
+                        }
+                    } else {
+                        ROT -= 10
+
+                        if (ROT <= 0) {
+                            ROT = 0
+                            TOROT = true
+                        }
+                    }
+                    document.getElementById("menu-offen").style.background = "rgb("+ROT+", 0, 0)"
+                }, 100)
+            }
+
+            if (openordersArray.length > _openordersArray.length) {
+                ContentData(0, data, management)
+            }
+
+            ORDER_DATA = data
+
+            let openorders = document.getElementById("menu-offen")
+            let doneorders = document.getElementById("menu-fertig")
+            let totalorders = document.getElementById("menu-alle")
+
+            openorders.innerHTML = 0
+            doneorders.innerHTML = 0
+            totalorders.innerHTML = 'Alle: ' + ORDER_DATA.length
+
+            openorders.onclick = function(data) {
+                //console.log(data)
+                clearInterval(NEW_ORDER)
+                document.getElementById("menu-offen").style.background = "rgb(0, 0, 0)"
+                ContentData(0, ORDER_DATA, management)
+            }
+            doneorders.onclick = function(data) {
+                //console.log(data)
+                ContentData(1, ORDER_DATA, management)
+            }
+            totalorders.onclick = function(data) {
+                //console.log(data)
+                ContentData(2, ORDER_DATA, management)
+            }
+
+            for (let a = 0; a < data.length; a++) {
+                const element = data[a]
+
+                if (element.Status === 1) {
+                    openorders.innerHTML++
+                }
+                if (element.Status === 2) {
+                    doneorders.innerHTML++
+                }
+            }
+
+            openorders.innerHTML = 'Offen: ' + openorders.innerHTML
+            doneorders.innerHTML = 'Fertig: ' + doneorders.innerHTML
+
+            ContentData(0, ORDER_DATA, management)
+        })
+    }
+
+function ContentData(type, data, management)
+{
+    management.innerHTML = ""
+
+    if (type === 0)
+    {
+        console.log("hello")
+        for (let a = 0; a < data.length; a++)
+        {
+            const element = data[a]
+            console.log(element)
+
+            let fullscreen = document.createElement("button")
+            fullscreen.classList.add("button-deepskyblue")
+            fullscreen.style.position = 'absolute'
+            fullscreen.style.right = "60%"
+            fullscreen.style.top = "0"
+            fullscreen.innerHTML = "Vollbild"
+            fullscreen.onclick = function(data)
+            {
+                let elem = document.documentElement
+                elem.requestFullscreen()
+            }
+
+            let fenster = document.createElement("button")
+            fenster.classList.add("button-deepskyblue")
+            fenster.style.position = 'absolute'
+            fenster.style.right = "40%"
+            fenster.style.top = "0"
+            fenster.innerHTML = "Fenster"
+            fenster.onclick = function(data)
+            {
+                document.exitFullscreen()
+            }
+
+            let order = document.createElement('div')
+            management.appendChild(order)
+            order.style.width = '100%'
+            order.style.height = 'auto'
+            order.style.top = 0
+            order.id = 'order#' + a
+
+            let next = document.createElement('button')
+            next.id = 'next#' + a
+            next.style.position = 'absolute'
+            next.style.right = 0
+            next.classList.add('button-deepskyblue')
+            next.onclick = function(data) {
+                document.getElementById('order#' + (a)).style.display = 'none'
+                document.getElementById('order#' + (a + 1)).style.display = 'block'
+            }
+            next.innerHTML = 'Next'
+
+            let back = document.createElement('button')
+            back.id = 'back#' + a
+            back.style.position = 'absolute'
+            back.style.left = 0
+            back.classList.add('button-deepskyblue')
+            back.onclick = function(data) {
+                document.getElementById('order#' + (a)).style.display = 'none'
+                document.getElementById('order#' + (a - 1)).style.display = 'block'
+            }
+            back.innerHTML = 'Back'
+
+            order.appendChild(back)
+            order.appendChild(fullscreen)
+            order.appendChild(fenster)
+            order.appendChild(next)
+
+            if (a == 0)
+            {
+                document.getElementById('back#' + a).disabled = true
+                back.classList.remove('button-deepskyblue')
+                back.classList.add('button-crimson')
+            }
+
+            if (a == (data.length - 1))
+            {
+                document.getElementById('next#' + a).disabled = true
+                next.classList.remove('button-deepskyblue')
+                next.classList.add('button-crimson')
+            }
+
+            if (a === 0)
+            {
+                order.style.display = 'block'
+            }
+            else
+            {
+                order.style.display = 'none'
+            }
+
+
+
+
+
+            let id = document.createElement('p')
+            id.innerHTML = 'Bestellkennung: ' + element.ID + " " + element.Name + " " + element.Address
+            id.style.fontSize = '1.37em'
+            id.style.paddingTop = '3.7em'
+            order.appendChild(id)      
+
+            let array = JSON.parse(element.Content)
+
+            //console.log(array)
+
+            const list = new Array()
+
+            for (let b = 0; b < array.length; b++)
+            {
+                const subelement = array[b]
+                //console.log(subelement)
+
+                list[b] = subelement["menge"] + 'x ' + subelement["nummer"] + ' ' + subelement["soße"] + ' ' + subelement["size"] + ' ' + subelement["fleisch"] + ' ' + subelement["scharf"] + ' ' + subelement["extrawunsch"]
+
+                let item = document.createElement('p')
+                item.innerHTML = '<b id="'+element.ID+'-item#'+b+'" style="font-size: 1.37rem; color: white;">'+ subelement[2] + 'x ' + subelement[0] + ' ' + subelement[3] + ' ' + subelement[1] +'€</b><br>'
+                item.style.fontSize = '1.15rem'
+
+                order.appendChild(item)
+
+                //item.innerHTML += '<button class="button-deepskyblue" style="font-size: 1rem;" onclick=itemFinish("'+element.ID+'-item#'+b+'")>Fertig</button>'
+            }
+
+            const print = document.createElement("button")
+            order.appendChild(print)
+            print.innerText = "Druck"
+            print.onclick = function()
+            {
+                printList(list, element)
+            }
+
+            printList(list, element)
+        }
+    } else if(type === 1) {
+        
+    } else if(type === 2) {
+        
+    }
+}
+
+function itemFinish(ID)
+{
+    let color = document.getElementById(ID).style.color
+    if (color == "white")
+    {
+        document.getElementById(ID).style.color = "green"
+    }
+    else
+    {
+        document.getElementById(ID).style.color = "white"
+    }
+    //console.log(color)
+}
+
+function printtest()
+{
+    let body = document.body.innerHTML
+    document.body.innerHTML = "<p>Hallo Welt</p><p style=\"font-size: 1em\">Hallo Welt</p><p style=\"font-size: 1.37em\">Hallo Welt</p>"
+    //console.log("VOR DEM DRUCK")
+    setTimeout(function()
+    {
+        window.print()
+        //console.log("NACH DEM DRUCK")
+
+        setTimeout(function()
+        {
+            document.body.innerHTML = body
+        }, 3000)
+    }, 3000)
+}
+
+function printList(list, element)
+{
+    const body = document.body.innerHTML
+    document.body.innerHTML = ""
+
+    const line1 = document.createElement("h4")
+    const line2 = document.createElement("h4")
+    const line3 = document.createElement("h4")
+    line1.innerText = "_____________"
+    line2.innerText = "_____________"
+    line3.innerText = "_____________"
+
+    const type = document.createElement("h2")
+    document.body.appendChild(type)
+    type.innerText = element["Type"]
+
+
+    const destination = document.createElement("h3")
+    destination.innerText = element["Address"]
+    if (type.innerText == "liefern")
+    {
+        document.body.appendChild(destination)
+        document.body.appendChild(line1)
+    }
+
+    const name = document.createElement("h3")
+    name.innerText = "Name: " + element["Name"]
+
+    document.body.appendChild(name)
+    document.body.appendChild(line2)
+
+    for (let a = 0; a < list.length; a++)
+    {
+        const entry = document.createElement("p")
+        document.body.appendChild(entry)
+        entry.innerText = list[a]
+    }
+
+    document.body.appendChild(line3)
+
+    const tele = document.createElement("p")
+    document.body.appendChild(tele)
+    tele.innerText = element["Tele"]
+
+    if (element["Zusatz"] != "")
+    {
+        const zusatz = document.createElement("p")
+        document.body.appendChild(zusatz)
+        zusatz.innerText = element["Zusatz"]
+    }
+
+    const footer = document.createElement("p")
+    document.body.appendChild(footer)
+    footer.style.fontSize = "0.37rem"
+    footer.innerHTML = "IP " + element["IP"] + " - Zeit " + element["Time"]
+
+    setTimeout(() => {
+        window.print()
+        document.body.innerHTML = body
+
+        const url = "https://azadweida.de/?method=order-print&order=" + element["ID"]
+        fetch(url)
+    }, 1)
+}
+</script>

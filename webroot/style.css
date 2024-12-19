@@ -1,0 +1,40 @@
+::-webkit-scrollbar {
+  width: 0;  /* Remove scrollbar space */
+  height: 0;
+}
+
+.headline {
+  font-size: 5dvh;
+  margin-top: 1%;
+  margin-bottom: 37px;
+  text-align: center;
+  width: 100%;
+}
+.content {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.button-deepskyblue
+{
+  cursor:crosshair;
+  border:3px solid deepskyblue;
+  border-radius:7px;
+  background-color:transparent;
+  color:deepskyblue;
+  font-size:24px;
+  margin-top: 7px;
+}
+
+.button-crimson
+{
+  cursor:crosshair;
+  border:3px solid crimson;
+  border-radius:7px;
+  background-color:transparent;
+  color:crimson;
+  font-size:24px;
+}
+
